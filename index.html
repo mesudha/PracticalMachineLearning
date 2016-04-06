@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="UTF-8">
+    <title>Practical Machine Learning by mesudha</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="stylesheets/normalize.css" media="screen">
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-light.css" media="screen">
+  </head>
+  <body>
+    <section class="page-header">
+      <h1 class="project-name">Practical Machine Learning</h1>
+      <h2 class="project-tagline">Practical Machine Learning Course Project</h2>
+      <a href="https://github.com/mesudha/PracticalMachineLearning" class="btn">View on GitHub</a>
+      <a href="https://github.com/mesudha/PracticalMachineLearning/zipball/master" class="btn">Download .zip</a>
+      <a href="https://github.com/mesudha/PracticalMachineLearning/tarball/master" class="btn">Download .tar.gz</a>
+    </section>
+
+    <section class="main-content">
+      <h1>
+<a id="practical-machine-learning-course-project" class="anchor" href="#practical-machine-learning-course-project" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Practical Machine Learning Course Project</h1>
+
+<p>Sudha Bhandari 
+April 6, 2016  </p>
+
+<h1>
+<a id="executive-summary" class="anchor" href="#executive-summary" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Executive Summary</h1>
+
+<p>Data collection about personal activity has been more easy with the availability of devices such as Jawbone Up, Nike FuelBand, and Fitbit. These sort of devices are used to record self movement. In this project , I will try and analyze dataset from the measurements of activities by group of enthusiasts. I will use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. </p>
+
+<p>The goal of this project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases.</p>
+
+<h1>
+<a id="loading-libraries" class="anchor" href="#loading-libraries" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Loading libraries</h1>
+
+<div class="highlight highlight-source-r"><pre>library(<span class="pl-smi">caret</span>)</pre></div>
+
+<pre><code>## Loading required package: lattice
+</code></pre>
+
+<pre><code>## Loading required package: ggplot2
+</code></pre>
+
+<div class="highlight highlight-source-r"><pre>library(<span class="pl-smi">gbm</span>)</pre></div>
+
+<pre><code>## Warning: package 'gbm' was built under R version 3.2.4
+</code></pre>
+
+<pre><code>## Loading required package: survival
+</code></pre>
+
+<pre><code>## 
+## Attaching package: 'survival'
+</code></pre>
+
+<pre><code>## The following object is masked from 'package:caret':
+## 
+##     cluster
+</code></pre>
+
+<pre><code>## Loading required package: splines
+</code></pre>
+
+<pre><code>## Loading required package: parallel
+</code></pre>
+
+<pre><code>## Loaded gbm 2.1.1
+</code></pre>
+
+<h1>
+<a id="loading-dataset" class="anchor" href="#loading-dataset" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Loading Dataset</h1>
+
+<p>Dataset to develop model and validate model is downloaded from provided link.</p>
+
+<p>The training data for this project are available here:
+<a href="https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv">training dataset</a></p>
+
+<p>The test data are available here:
+<a href="https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv">testing dataset</a></p>
+
+<p>To load data to R, you can download it manually or by using following commands:</p>
+
+<div class="highlight highlight-source-r"><pre><span class="pl-smi">train_file</span> <span class="pl-k">&lt;-</span> <span class="pl-s"><span class="pl-pds">"</span>pml-training.csv<span class="pl-pds">"</span></span>
+<span class="pl-smi">test_file</span> <span class="pl-k">&lt;-</span> <span class="pl-s"><span class="pl-pds">"</span>pml-testing.csv<span class="pl-pds">"</span></span> 
+<span class="pl-smi">train_url</span> <span class="pl-k">&lt;-</span> <span class="pl-s"><span class="pl-pds">"</span>https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv<span class="pl-pds">"</span></span>
+<span class="pl-k">if</span>(<span class="pl-k">!</span>file.exists(<span class="pl-smi">train_file</span>)){
+    download.file(<span class="pl-smi">train_url</span>)    
+}
+
+<span class="pl-smi">test_url</span> <span class="pl-k">&lt;-</span> <span class="pl-s"><span class="pl-pds">"</span>https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv<span class="pl-pds">"</span></span>
+<span class="pl-k">if</span>(<span class="pl-k">!</span>file.exists(<span class="pl-smi">test_file</span>)){
+    download.file(<span class="pl-smi">test_url</span>)  
+}</pre></div>
+
+<p>After downloading the dataset, load the dataset into R</p>
+
+<div class="highlight highlight-source-r"><pre><span class="pl-smi">train_data</span> <span class="pl-k">&lt;-</span> read.csv(<span class="pl-smi">train_file</span>, <span class="pl-v">na.strings</span> <span class="pl-k">=</span> c(<span class="pl-s"><span class="pl-pds">"</span>#DIV/0!<span class="pl-pds">"</span></span>,<span class="pl-s"><span class="pl-pds">"</span>NA<span class="pl-pds">"</span></span>))
+<span class="pl-smi">final_test_data</span> <span class="pl-k">&lt;-</span> read.csv(<span class="pl-smi">test_file</span>, <span class="pl-v">na.strings</span> <span class="pl-k">=</span> c(<span class="pl-s"><span class="pl-pds">"</span>#DIV/0!<span class="pl-pds">"</span></span>,<span class="pl-s"><span class="pl-pds">"</span>NA<span class="pl-pds">"</span></span>))</pre></div>
+
+<h1>
+<a id="cleaning-data" class="anchor" href="#cleaning-data" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Cleaning Data</h1>
+
+<p>First five columns(X,user_name,raw_timestamp_part_1, raw_timestamp_part_2, cvtd_timestamp) has no significance in building a prediction model. So, remove first five columns</p>
+
+<div class="highlight highlight-source-r"><pre><span class="pl-smi">train_data</span> <span class="pl-k">&lt;-</span> subset(<span class="pl-smi">train_data</span>, <span class="pl-v">select</span> <span class="pl-k">=</span> <span class="pl-k">-</span> (<span class="pl-c1">1</span><span class="pl-k">:</span><span class="pl-c1">5</span>))
+
+<span class="pl-c"># remove variables with nearly zero variance</span>
+<span class="pl-smi">zerovarIndex</span><span class="pl-k">&lt;-</span> nearZeroVar(<span class="pl-smi">train_data</span>)
+<span class="pl-smi">train_data</span> <span class="pl-k">&lt;-</span> <span class="pl-smi">train_data</span>[, <span class="pl-k">-</span><span class="pl-smi">zerovarIndex</span>]
+
+<span class="pl-c"># remove variables that are almost always NA</span>
+<span class="pl-smi">mostlyNA</span> <span class="pl-k">&lt;-</span> sapply(<span class="pl-smi">train_data</span>, <span class="pl-k">function</span>(<span class="pl-smi">x</span>) mean(is.na(<span class="pl-smi">x</span>))) <span class="pl-k">&gt;</span> <span class="pl-c1">0.9</span>
+<span class="pl-smi">train_data</span> <span class="pl-k">&lt;-</span> <span class="pl-smi">train_data</span>[, <span class="pl-smi">mostlyNA</span><span class="pl-k">==</span><span class="pl-c1">F</span>]</pre></div>
+
+<h1>
+<a id="model-building" class="anchor" href="#model-building" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Model Building</h1>
+
+<p>I decided to use RandomForest model to see if it returns acceptable performance. I will be using <code>train</code> function in <code>caret</code> package to train the model and use 10-fold cross validation.</p>
+
+<div class="highlight highlight-source-r"><pre><span class="pl-c">#partition the dataset into train and test set</span>
+<span class="pl-smi">dataIndex</span> <span class="pl-k">&lt;-</span> createDataPartition(<span class="pl-smi">train_data</span><span class="pl-k">$</span><span class="pl-smi">classe</span>, <span class="pl-v">p</span> <span class="pl-k">=</span> <span class="pl-c1">0.7</span>, <span class="pl-v">list</span> <span class="pl-k">=</span> <span class="pl-c1">FALSE</span>)
+<span class="pl-smi">training_set</span> <span class="pl-k">&lt;-</span> <span class="pl-smi">train_data</span>[<span class="pl-smi">dataIndex</span>,]
+<span class="pl-smi">testing_set</span> <span class="pl-k">&lt;-</span> <span class="pl-smi">train_data</span>[<span class="pl-k">-</span><span class="pl-smi">dataIndex</span>,]
+
+<span class="pl-smi">modelcontrol</span> <span class="pl-k">&lt;-</span> trainControl(<span class="pl-v">method</span><span class="pl-k">=</span><span class="pl-s"><span class="pl-pds">"</span>cv<span class="pl-pds">"</span></span>, <span class="pl-v">number</span><span class="pl-k">=</span><span class="pl-c1">10</span>, <span class="pl-v">verboseIter</span><span class="pl-k">=</span><span class="pl-c1">FALSE</span>)
+<span class="pl-smi">rfFit</span> <span class="pl-k">&lt;-</span> train(<span class="pl-smi">classe</span> <span class="pl-k">~</span> ., <span class="pl-v">method</span> <span class="pl-k">=</span> <span class="pl-s"><span class="pl-pds">"</span>rf<span class="pl-pds">"</span></span>, <span class="pl-v">data</span> <span class="pl-k">=</span> <span class="pl-smi">training_set</span>, <span class="pl-v">trControl</span> <span class="pl-k">=</span> <span class="pl-smi">modelcontrol</span>)</pre></div>
+
+<pre><code>## Loading required package: randomForest
+</code></pre>
+
+<pre><code>## randomForest 4.6-12
+</code></pre>
+
+<pre><code>## Type rfNews() to see new features/changes/bug fixes.
+</code></pre>
+
+<pre><code>## 
+## Attaching package: 'randomForest'
+</code></pre>
+
+<pre><code>## The following object is masked from 'package:ggplot2':
+## 
+##     margin
+</code></pre>
+
+<p>Lets use boosting algorithm with 10-fold cross validation to predict classe.</p>
+
+<div class="highlight highlight-source-r"><pre><span class="pl-smi">boostFit</span> <span class="pl-k">&lt;-</span> train(<span class="pl-smi">classe</span> <span class="pl-k">~</span> ., <span class="pl-v">method</span> <span class="pl-k">=</span> <span class="pl-s"><span class="pl-pds">"</span>gbm<span class="pl-pds">"</span></span>, <span class="pl-v">data</span> <span class="pl-k">=</span> <span class="pl-smi">training_set</span>, <span class="pl-v">verbose</span> <span class="pl-k">=</span> <span class="pl-c1">FALSE</span>, <span class="pl-v">trControl</span> <span class="pl-k">=</span> <span class="pl-smi">modelcontrol</span>)</pre></div>
+
+<pre><code>## Loading required package: plyr
+</code></pre>
+
+<h1>
+<a id="random-forest-vs-boosting-model-evaluation" class="anchor" href="#random-forest-vs-boosting-model-evaluation" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Random Forest vs Boosting Model Evaluation</h1>
+
+<p>Use the fitted model to predict the classe in testing dataset. Confusion matrix will compare predicted vs actual values.</p>
+
+<div class="highlight highlight-source-r"><pre>par(<span class="pl-v">mfrow</span><span class="pl-k">=</span> c(<span class="pl-c1">1</span>,<span class="pl-c1">2</span>))
+plot(<span class="pl-smi">rfFit</span>, <span class="pl-v">ylim</span> <span class="pl-k">=</span> c(<span class="pl-c1">0.9</span>, <span class="pl-c1">1</span>), <span class="pl-v">main</span> <span class="pl-k">=</span> <span class="pl-s"><span class="pl-pds">"</span>Random Forest model<span class="pl-pds">"</span></span>)</pre></div>
+
+<p><img src="PracticalMachineLearning_files/figure-html/Fitevaluation-1.png" alt="">&lt;!-- --&gt;</p>
+
+<div class="highlight highlight-source-r"><pre>plot(<span class="pl-smi">boostFit</span>, <span class="pl-v">ylim</span> <span class="pl-k">=</span> c(<span class="pl-c1">0.9</span>, <span class="pl-c1">1</span>), <span class="pl-v">main</span> <span class="pl-k">=</span> <span class="pl-s"><span class="pl-pds">"</span>Boosting model<span class="pl-pds">"</span></span>)</pre></div>
+
+<p><img src="PracticalMachineLearning_files/figure-html/Fitevaluation-2.png" alt="">&lt;!-- --&gt;</p>
+
+<div class="highlight highlight-source-r"><pre><span class="pl-c"># use the random forest model fitted to predict classe in testing set</span>
+<span class="pl-smi">rfFit_predicted</span> <span class="pl-k">&lt;-</span> predict(<span class="pl-smi">rfFit</span>, <span class="pl-v">newdata</span> <span class="pl-k">=</span> <span class="pl-smi">testing_set</span>)
+
+<span class="pl-c"># show confusion matrix to get estimate of out-of-sample error from prediction</span>
+confusionMatrix(<span class="pl-smi">testing_set</span><span class="pl-k">$</span><span class="pl-smi">classe</span>, <span class="pl-smi">rfFit_predicted</span>)</pre></div>
+
+<pre><code>## Confusion Matrix and Statistics
+## 
+##           Reference
+## Prediction    A    B    C    D    E
+##          A 1673    0    0    0    1
+##          B    7 1131    1    0    0
+##          C    0    5 1021    0    0
+##          D    0    0    1  963    0
+##          E    0    0    0    5 1077
+## 
+## Overall Statistics
+##                                           
+##                Accuracy : 0.9966          
+##                  95% CI : (0.9948, 0.9979)
+##     No Information Rate : 0.2855          
+##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16       
+##                                           
+##                   Kappa : 0.9957          
+##  Mcnemar's Test P-Value : NA              
+## 
+## Statistics by Class:
+## 
+##                      Class: A Class: B Class: C Class: D Class: E
+## Sensitivity            0.9958   0.9956   0.9980   0.9948   0.9991
+## Specificity            0.9998   0.9983   0.9990   0.9998   0.9990
+## Pos Pred Value         0.9994   0.9930   0.9951   0.9990   0.9954
+## Neg Pred Value         0.9983   0.9989   0.9996   0.9990   0.9998
+## Prevalence             0.2855   0.1930   0.1738   0.1645   0.1832
+## Detection Rate         0.2843   0.1922   0.1735   0.1636   0.1830
+## Detection Prevalence   0.2845   0.1935   0.1743   0.1638   0.1839
+## Balanced Accuracy      0.9978   0.9970   0.9985   0.9973   0.9990
+</code></pre>
+
+<div class="highlight highlight-source-r"><pre><span class="pl-c"># use the boosting model fitted to predict classe in testing set</span>
+<span class="pl-smi">boostFit_predicted</span> <span class="pl-k">&lt;-</span> predict(<span class="pl-smi">boostFit</span>, <span class="pl-v">newdata</span> <span class="pl-k">=</span> <span class="pl-smi">testing_set</span>)
+
+<span class="pl-c"># show confusion matrix to get estimate of out-of-sample error from prediction</span>
+confusionMatrix(<span class="pl-smi">testing_set</span><span class="pl-k">$</span><span class="pl-smi">classe</span>, <span class="pl-smi">boostFit_predicted</span>)</pre></div>
+
+<pre><code>## Confusion Matrix and Statistics
+## 
+##           Reference
+## Prediction    A    B    C    D    E
+##          A 1671    1    2    0    0
+##          B   14 1095   24    4    2
+##          C    0    9 1016    0    1
+##          D    0    7   12  945    0
+##          E    0    4    2    8 1068
+## 
+## Overall Statistics
+##                                           
+##                Accuracy : 0.9847          
+##                  95% CI : (0.9812, 0.9877)
+##     No Information Rate : 0.2863          
+##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16       
+##                                           
+##                   Kappa : 0.9807          
+##  Mcnemar's Test P-Value : NA              
+## 
+## Statistics by Class:
+## 
+##                      Class: A Class: B Class: C Class: D Class: E
+## Sensitivity            0.9917   0.9812   0.9621   0.9875   0.9972
+## Specificity            0.9993   0.9908   0.9979   0.9961   0.9971
+## Pos Pred Value         0.9982   0.9614   0.9903   0.9803   0.9871
+## Neg Pred Value         0.9967   0.9956   0.9918   0.9976   0.9994
+## Prevalence             0.2863   0.1896   0.1794   0.1626   0.1820
+## Detection Rate         0.2839   0.1861   0.1726   0.1606   0.1815
+## Detection Prevalence   0.2845   0.1935   0.1743   0.1638   0.1839
+## Balanced Accuracy      0.9955   0.9860   0.9800   0.9918   0.9971
+</code></pre>
+
+<p>From above comparison, random forest is the best model that can be used to fit the dataset. </p>
+
+<h1>
+<a id="rebuild-selected-model" class="anchor" href="#rebuild-selected-model" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Rebuild selected model</h1>
+
+<p>Selected model is rebuild with all the training dataset to produce more accurate results.</p>
+
+<div class="highlight highlight-source-r"><pre><span class="pl-smi">modelFit</span> <span class="pl-k">&lt;-</span> train(<span class="pl-smi">classe</span> <span class="pl-k">~</span> ., <span class="pl-v">method</span> <span class="pl-k">=</span> <span class="pl-s"><span class="pl-pds">"</span>rf<span class="pl-pds">"</span></span>, <span class="pl-v">data</span> <span class="pl-k">=</span> <span class="pl-smi">train_data</span>, <span class="pl-v">trControl</span> <span class="pl-k">=</span> <span class="pl-smi">modelcontrol</span>)
+<span class="pl-smi">modelFit</span><span class="pl-k">$</span><span class="pl-smi">finalModel</span></pre></div>
+
+<pre><code>## 
+## Call:
+##  randomForest(x = x, y = y, mtry = param$mtry) 
+##                Type of random forest: classification
+##                      Number of trees: 500
+## No. of variables tried at each split: 27
+## 
+##         OOB estimate of  error rate: 0.14%
+## Confusion matrix:
+##      A    B    C    D    E  class.error
+## A 5578    1    0    0    1 0.0003584229
+## B    5 3789    2    1    0 0.0021069265
+## C    0    5 3417    0    0 0.0014611338
+## D    0    0    9 3206    1 0.0031094527
+## E    0    0    0    3 3604 0.0008317161
+</code></pre>
+
+<p>Estimated out of sample error rate for the random forests model is 0.14% as reported by the final model.</p>
+
+<h1>
+<a id="final-prediction" class="anchor" href="#final-prediction" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Final Prediction</h1>
+
+<p>Finally, predicting the classe of testing dataset provided using the model selected and writing the result to files.</p>
+
+<div class="highlight highlight-source-r"><pre><span class="pl-c"># predict on test set</span>
+<span class="pl-smi">preds</span> <span class="pl-k">&lt;-</span> predict(<span class="pl-smi">modelFit</span>, <span class="pl-v">newdata</span><span class="pl-k">=</span><span class="pl-smi">final_test_data</span>)
+
+<span class="pl-c"># convert predictions to character vector</span>
+<span class="pl-smi">preds</span> <span class="pl-k">&lt;-</span> as.character(<span class="pl-smi">preds</span>)
+
+<span class="pl-c"># create function to write predictions to files</span>
+<span class="pl-en">pml_write_files</span> <span class="pl-k">&lt;-</span> <span class="pl-k">function</span>(<span class="pl-smi">x</span>) {
+    <span class="pl-smi">n</span> <span class="pl-k">&lt;-</span> length(<span class="pl-smi">x</span>)
+    <span class="pl-k">for</span>(<span class="pl-smi">i</span> <span class="pl-k">in</span> <span class="pl-c1">1</span><span class="pl-k">:</span><span class="pl-smi">n</span>) {
+        <span class="pl-smi">filename</span> <span class="pl-k">&lt;-</span> paste0(<span class="pl-s"><span class="pl-pds">"</span>predicted_output/problem_id_<span class="pl-pds">"</span></span>, <span class="pl-smi">i</span>, <span class="pl-s"><span class="pl-pds">"</span>.txt<span class="pl-pds">"</span></span>)
+        write.table(<span class="pl-smi">x</span>[<span class="pl-smi">i</span>], <span class="pl-v">file</span><span class="pl-k">=</span><span class="pl-smi">filename</span>, <span class="pl-v">quote</span><span class="pl-k">=</span><span class="pl-c1">FALSE</span>, <span class="pl-v">row.names</span><span class="pl-k">=</span><span class="pl-c1">FALSE</span>, <span class="pl-v">col.names</span><span class="pl-k">=</span><span class="pl-c1">FALSE</span>)
+    }
+}
+
+<span class="pl-c"># create prediction files to submit</span>
+pml_write_files(<span class="pl-smi">preds</span>)</pre></div>
+
+      <footer class="site-footer">
+        <span class="site-footer-owner"><a href="https://github.com/mesudha/PracticalMachineLearning">Practical Machine Learning</a> is maintained by <a href="https://github.com/mesudha">mesudha</a>.</span>
+
+        <span class="site-footer-credits">This page was generated by <a href="https://pages.github.com">GitHub Pages</a> using the <a href="https://github.com/jasonlong/cayman-theme">Cayman theme</a> by <a href="https://twitter.com/jasonlong">Jason Long</a>.</span>
+      </footer>
+
+    </section>
+
+  
+  </body>
+</html>
